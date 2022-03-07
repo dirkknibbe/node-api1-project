@@ -41,7 +41,7 @@ server.get("/api/users/:id", (req, res) => {
 server.put("/api/users/:id", (req, res) => {
   const user = req.body;
 
-  if (!req.body.name || !req.body.bio) {
+  if (!user.name || !user.bio) {
     res
       .status(400)
       .json({ message: "Please provide name and bio for the user" });
@@ -94,8 +94,10 @@ server.post("/api/users", (req, res) => {
     .then((user) => {
       res.status(201).json(user);
     })
-    .catch((err) => {
-      res.status(500).json({ message: err.message });
+    .catch(() => {
+      res.status(500).json({
+        message: "There was an error while saving the user to the database",
+      });
     });
 });
 
