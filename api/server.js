@@ -1,54 +1,105 @@
 // BUILD YOUR SERVER HERE
 
-const { nanoid } = require("nanoid");
+const express = require("express");
 
-function getId() {
-  return nanoid().slice(0, 5);
-}
+const Users = require("./users/model.js");
 
-const initializeUsers = () => [
-  { id: getId(), name: "Ed Carter", bio: "hero" },
-  { id: getId(), name: "Mary Edwards", bio: "super hero" },
-];
+const server = express();
 
-// FAKE IN-MEMORY USERS "TABLE"
-let users = initializeUsers();
+server.use(express.json());
 
-module.exports = {
-  async find() {
-    // SELECT * FROM users;
-    return Promise.resolve(users);
-  },
+server.get("/api/users", (req, res) => {
+  Users.find()
+    .then((users) => {
+      res.json(users);
+    })
+    .catch(() => {
+      res
+        .status(500)
+        .json({ message: "The users information could not be retrieved" });
+    });
+});
 
-  async findById(id) {
-    // SELECT * FROM users WHERE id = 1;
-    const user = users.find((d) => d.id === id);
-    return Promise.resolve(user);
-  },
+server.get("/api/users/:id", (req, res) => {
+  Users.findById(req.params.id)
+    .then((user) => {
+      if (user == null) {
+        res
+          .status(404)
+          .json({ message: "The user with the specified ID does not exist" });
+      } else {
+        res.status(200).json(user);
+      }
+    })
+    .catch(() => {
+      res
+        .status(500)
+        .json({ message: "The user information could not be retrieved" });
+    });
+});
 
-  async insert({ name, bio }) {
-    // INSERT INTO users (name, bio) VALUES ('foo', 'bar');
-    const newUser = { id: getId(), name, bio };
-    users.push(newUser);
-    return Promise.resolve(newUser);
-  },
+server.put("/api/users/:id", (req, res) => {
+  const user = req.body;
 
-  async update(id, changes) {
-    // UPDATE users SET name = 'foo', bio = 'bar WHERE id = 1;
-    const user = users.find((user) => user.id === id);
-    if (!user) return Promise.resolve(null);
+  if (!user.name || !user.bio) {
+    res
+      .status(400)
+      .json({ message: "Please provide name and bio for the user" });
+    return;
+  }
+  Users.update(req.params.id, user)
+    .then((user) => {
+      if (user == null) {
+        res
+          .status(404)
+          .json({ message: "The user with the specified ID does not exist" });
+      } else {
+        res.status(200).json(user);
+      }
+    })
+    .catch(() => {
+      res
+        .status(500)
+        .json({ message: "The user information could not be modified" });
+    });
+});
 
-    const updatedUser = { ...changes, id };
-    users = users.map((d) => (d.id === id ? updatedUser : d));
-    return Promise.resolve(updatedUser);
-  },
+server.delete("/api/users/:id", (req, res) => {
+  Users.remove(req.params.id)
+    .then((user) => {
+      if (user == null) {
+        res
+          .status(404)
+          .json({ message: "The user with the specified ID does not exist" });
+      } else {
+        res.status(200).json(user);
+      }
+    })
+    .catch(() => {
+      res.status(500).json({ message: "The user could not be removed" });
+    });
+});
 
-  async remove(id) {
-    // DELETE FROM users WHERE id = 1;
-    const user = users.find((user) => user.id === id);
-    if (!user) return Promise.resolve(null);
+server.post("/api/users", (req, res) => {
+  const body = req.body;
 
-    users = users.filter((d) => d.id !== id);
-    return Promise.resolve(user);
-  },
-}; // EXPORT YOUR SERVER instead of {}
+  if (!req.body.name || !req.body.bio) {
+    res
+      .status(400)
+      .json({ message: "Please provide name and bio for the user" });
+    return;
+  }
+
+  Users.insert(body)
+    .then((user) => {
+      res.status(201).json(user);
+    })
+    .catch(() => {
+      res.status(500).json({
+        message: "There was an error while saving the user to the database",
+      });
+    });
+});
+
+module.exports = server; // EXPORT YOUR SERVER instead of {}
+/////////////////////////////////////////
